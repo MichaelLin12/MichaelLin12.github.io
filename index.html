@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <Title> World Cup through the Years</Title>
+        <script src="https://d3js.org/d3.v7.min.js"></script>
+        <meta charset="UTF-8">
+        <link rel="stylesheet" href="css/index.css">
+    </head>
+    <body>
+        <h1>
+            The World Cup Through the Years
+        </h1>
+        <p>
+            The first World Cup tournament began in 1930. Back then, there were
+            only 13 countries that participated in the World Cup. Numerous factors played
+            a role in limiting the number of participants, including intercontential
+            travel and World War II. Though as these hurdles gradually disappeared, more and 
+            more countries began to participate in the event. By 1998, there were 32 countries
+            participating in the tournament, exactly the same number of participants in today's
+            World Cup.
+        </p>
+        <div id="tooltip" style="
+            position: absolute;
+            display: none;
+            background: lightgray;
+            padding: 5px;
+            border-radius: 3px;
+            font-size: 12px;
+            max-width: 200px;
+            "></div>
+        <svg width="600" height="400"></svg>
+        <script>
+            d3.csv("data/mens_only_qualified_teams.csv").then(function(data) {
+                data.forEach(d => {
+                    d.tournament_id = d.tournament_id;
+                });
+
+                const aggData = Array.from(
+                    d3.group(data, d => d.tournament_id),
+                    ([tournament_id, rows]) => ({
+                        tournament_id: tournament_id,
+                        num_teams: rows.length
+                    })
+                );
+
+                const svg = d3.select("svg");
+                const width = +svg.attr("width");
+                const height = +svg.attr("height");
+                const margin = { top: 20, right: 30, bottom: 60, left: 60 };
+                const chartWidth = width - margin.left - margin.right;
+                const chartHeight = height - margin.top - margin.bottom;
+                const chart = svg.append("g")
+                    .attr("transform", `translate(${margin.left},${margin.top})`);
+                chart.append("text")
+                    .attr("x", chartWidth / 2)
+                    .attr("y", -margin.top / 2 + 10)
+                    .attr("text-anchor", "middle")
+                    .style("font-size", "16px")
+                    .style("font-weight", "bold")
+                    .text("Qualified Teams in the World Cup");
+                const tooltip = d3.select("#tooltip");
+                const x = d3.scaleBand()
+                    .domain(aggData.map(d => d.tournament_id))
+                    .range([0, chartWidth])
+                    .padding(0.1);
+                const y = d3.scaleLinear()
+                    .domain([0, d3.max(aggData, d => d.num_teams) * 1.05])
+                    .range([chartHeight, 0])
+                    .nice();
+                chart.append("g")
+                    .attr("transform", `translate(0,${chartHeight})`)
+                    .call(d3.axisBottom(x))
+                    .selectAll("text")
+                    .attr("transform", "rotate(-45)")
+                    .style("text-anchor", "end")
+                    .attr("dx", "-.8em")
+                    .attr("dy", ".15em");
+                chart.append("g")
+                    .call(d3.axisLeft(y));
+                chart.selectAll(".bar")
+                    .data(aggData)
+                    .join("rect")
+                    .attr("class", "bar")
+                    .attr("x", d => x(d.tournament_id))
+                    .attr("y", d => y(d.num_teams))
+                    .attr("width", x.bandwidth())
+                    .attr("height", d => chartHeight - y(d.num_teams))
+                    .attr("fill", "steelblue")
+                    .on("mouseover", function(event, d) {
+                        const teams = data
+                            .filter(t => t.tournament_id === d.tournament_id)
+                            .map(t => t.team_name)
+                            .join(", ");
+
+                        tooltip.style("display", "block")
+                            .html(`<strong>${d.tournament_id}</strong><br>Teams: ${teams}`);
+                    })
+                    .on("mousemove", function(event) {
+                        tooltip.style("top", (event.pageY - 40) + "px")
+                            .style("left", (event.pageX + 10) + "px");
+                    })
+                    .on("mouseout", function() {
+                        tooltip.style("display", "none");
+                    });
+            });
+        </script>
+        <p>
+            The growth in the tournament format has not only allowed for more teams to join but also for 
+            more teams to score goals. The number of goals do not only come from the fact that more
+            teams play in the world cup, but also from the mere fact that the game has shifted to be
+            more attacker sided.
+        </p>
+        <svg width="600" height="400"></svg>
+        <script>
+            const secondSvg = d3.selectAll("svg").filter((d, i) => i === 1);
+            const width = +secondSvg.attr("width");
+            const height = +secondSvg.attr("height");
+            const margin_second = {top: 20, right: 30, bottom: 60, left: 60};
+            const chartWidth = width - margin_second.left - margin_second.right;
+            const chartHeight = height - margin_second.top - margin_second.bottom;
+            const chart = secondSvg.append("g")
+                .attr("transform", `translate(${margin_second.left},${margin_second.top})`);
+            chart.append("text")
+                    .attr("x", chartWidth/ 2)
+                    .attr("y", -margin_second.top / 2 + 10)
+                    .attr("text-anchor", "middle")
+                    .style("font-size", "16px")
+                    .style("font-weight", "bold")
+                    .text("Number of goals");
+            d3.csv("data/goals_per_tournament.csv").then(function(data) {
+                data.forEach(d => {
+                    d.goal_id = +d.goal_id;
+                });
+            const x = d3.scaleBand()
+                .domain(data.map(d => d.tournament_id))
+                .range([0, chartWidth])
+                .padding(0.1);
+            const y = d3.scaleLinear()
+                .domain([0, d3.max(data, d => d.goal_id) * 1.05])
+                .range([chartHeight, 0])
+                .nice();
+            chart.append("g")
+                .attr("transform", `translate(0,${chartHeight})`)
+                .call(d3.axisBottom(x))
+                .selectAll("text")
+                .attr("transform", "rotate(-45)")
+                .style("text-anchor", "end");
+            chart.append("g").call(d3.axisLeft(y));
+            chart.selectAll(".bar")
+                .data(data)
+                .join("rect")
+                .attr("class", "bar")
+                .attr("x", d => x(d.tournament_id))
+                .attr("y", d => y(d.goal_id))
+                .attr("width", x.bandwidth())
+                .attr("height", d => chartHeight - y(d.goal_id))
+                .attr("fill", "steelblue");
+        });
+        </script>
+        <p>
+            Likewise, we also can see that many of the teams are much closer in skill today than
+            they were years ago due to a slight increase in the number of penalty shootouts(which occur at the very 
+            end of a game if the game is tied and cannot be decided in overtime) that
+            have occurred in the past few world cups. Penalty shootouts were only implemented starting in 1982
+        </p>
+        <svg width="600" height="400"></svg>
+        <script>
+            const thirdSvg = d3.selectAll("svg").filter((d, i) => i === 2);
+            const width_shoot = +thirdSvg.attr("width");
+            const height_shoot = +thirdSvg.attr("height");
+            const margin_shoot = { top: 20, right: 30, bottom: 60, left: 60 };
+            const chartWidth_shoot = width_shoot - margin_shoot.left - margin_shoot.right;
+            const chartHeight_shoot = height_shoot - margin_shoot.top - margin_shoot.bottom;
+            const chart_shoot = thirdSvg.append("g")
+                .attr("transform", `translate(${margin_shoot.left},${margin_shoot.top})`);
+            chart_shoot.append("text")
+                .attr("x", chartWidth_shoot / 2)
+                .attr("y", -margin_shoot.top / 2 + 10)
+                .attr("text-anchor", "middle")
+                .style("font-size", "16px")
+                .style("font-weight", "bold")
+                .text("Number of Penalty Shootouts");
+            d3.csv("data/shootouts_per_tournament.csv").then(function(data) {
+                data.forEach(d => d.match_id = +d.match_id);
+                const x = d3.scaleBand()
+                    .domain(data.map(d => d.tournament_id))
+                    .range([0, chartWidth_shoot])
+                    .padding(0.1);
+                const y = d3.scaleLinear()
+                    .domain([0, d3.max(data, d => d.match_id)])
+                    .nice()
+                    .range([chartHeight_shoot, 0]);
+                chart_shoot.append("g")
+                    .attr("transform", `translate(0,${chartHeight_shoot})`)
+                    .call(d3.axisBottom(x))
+                    .selectAll("text")
+                    .attr("transform", "rotate(-45)")
+                    .style("text-anchor", "end");
+                chart_shoot.append("g").call(d3.axisLeft(y));
+                chart_shoot.selectAll(".bar")
+                    .data(data)
+                    .join("rect")
+                    .attr("class", "bar")
+                    .attr("x", d => x(d.tournament_id))
+                    .attr("y", d => y(d.match_id))
+                    .attr("width", x.bandwidth())
+                    .attr("height", d => chartHeight_shoot - y(d.match_id))
+                    .attr("fill", "steelblue");
+            });
+        </script>
+        <p>
+            Yet even though the skill gap has seemingly grown smaller over time, European teams
+            continue to dominate the event as evidenced by the number of top four finishes UEFA
+            has had over the existence of the tournament. No other region of the world comes close.
+        </p>
+        <svg width="600" height="400"></svg>
+        <div id="tooltip2" style="
+            position: absolute;
+            display: none;
+            background: lightgray;
+            padding: 5px;
+            border-radius: 3px;
+            font-size: 12px;
+            max-width: 300px;       /* limit width to prevent very wide tooltips */
+            white-space: normal;    /* allow wrapping */
+            word-wrap: break-word;  /* break long team names if needed */
+            line-height: 1.4em;     /* a bit more spacing for readability */
+        "></div>
+        <script>
+            const fourthSvg = d3.selectAll("svg").filter((d, i) => i === 3);
+            const width_top = +fourthSvg.attr("width");
+            const height_top = +fourthSvg.attr("height");
+            const margin_top = { top: 20, right: 30, bottom: 60, left: 60 };
+            const chartWidth_top = width - margin_top.left - margin_top.right;
+            const chartHeight_top = height - margin_top.top - margin_top.bottom;
+            const chart_top = fourthSvg.append("g")
+            .attr("transform", `translate(${margin_top.left},${margin_top.top})`);
+            chart_top.append("text")
+                    .attr("x", chartWidth_top / 2)
+                    .attr("y", -margin_top.top / 2 + 10)
+                    .attr("text-anchor", "middle")
+                    .style("font-size", "16px")
+                    .style("font-weight", "bold")
+                    .text("Top 4 Finishes by each Country in each Confederation");
+            d3.csv("data/team_standings.csv").then(function(data) {
+                const aggData = Array.from(
+                    d3.rollup(
+                        data,
+                        v => v.length,
+                        d => d.confederation_code
+                        ),
+                        ([confederation_code, count]) => ({ confederation_code, count })
+                );
+                const teamsByConfed = d3.group(data, d => d.confederation_code);
+                console.log(teamsByConfed)
+                const tooltip = d3.select("#tooltip2");
+                const x = d3.scaleBand()
+                    .domain(aggData.map(d => d.confederation_code))
+                    .range([0, chartWidth_top])
+                    .padding(0.1);
+                const y = d3.scaleLinear()
+                    .domain([0, d3.max(aggData, d => d.count)])
+                    .nice()
+                    .range([chartHeight_top, 0]);
+                chart_top.append("g")
+                    .attr("transform", `translate(0,${chartHeight_top})`)
+                    .call(d3.axisBottom(x))
+                    .selectAll("text")
+                    .attr("transform", "rotate(-45)")
+                    .style("text-anchor", "end");
+                chart_top.append("g")
+                    .call(d3.axisLeft(y));
+                chart_top.selectAll(".bar")
+                    .data(aggData)
+                    .join("rect")
+                    .attr("class", "bar")
+                    .attr("x", d => x(d.confederation_code))
+                    .attr("y", d => y(d.count))
+                    .attr("width", x.bandwidth())
+                    .attr("height", d => chartHeight_top - y(d.count))
+                    .attr("fill", "steelblue")
+                    .on("mouseover", function(event, d) {
+                        const teams = teamsByConfed.get(d.confederation_code).map(t => t.team_name_x);
+                        let tooltipHTML = `<strong>${d.confederation_code}</strong><br>` 
+                                        + teams.join("<br>");  // each team on a new line
+                        tooltip.transition().duration(200).style("opacity", 1);
+                        tooltip.html(tooltipHTML)
+                            .style("left", (event.pageX + 5) + "px")
+                            .style("top", (event.pageY - 28) + "px")
+                            .style("display", "block");
+                    })
+                    .on("mousemove", function(event) {
+                        tooltip.style("left", (event.pageX + 5) + "px")
+                            .style("top", (event.pageY - 28) + "px");
+                    })
+                    .on("mouseout", function() {
+                        tooltip.transition().duration(200).style("opacity", 0);
+                    });
+            });
+        </script>
+        <p>
+            And that is a high level overview of the World Cup since 1930 until 2022
+        </p>
+    </body>
+</html>
